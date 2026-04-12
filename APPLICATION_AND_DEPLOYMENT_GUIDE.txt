@@ -1,0 +1,218 @@
+================================================================================
+  SMART PLACEMENT TRACKER — HOW IT WORKS, DATA STORAGE & MERN / AWS ROADMAP
+================================================================================
+
+This document describes the current frontend-only behavior, where data lives
+today, and a practical path to a full MERN stack with hosting, MongoDB, and AWS.
+
+
+--------------------------------------------------------------------------------
+1. HOW THE APPLICATION WORKS (CURRENT FRONTEND)
+--------------------------------------------------------------------------------
+
+• Stack: React (Vite + TypeScript) with client-side routing (React Router).
+
+• Entry: The user opens the app in the browser. Unauthenticated users are sent
+  to the Login / Signup screen. After a successful auth flow, they see the main
+  shell with a top navigation bar.
+
+• Main areas:
+  - Auth: Toggle between Login (email + password) and Signup (name + email +
+    password). There is no real server verification yet; a mock JWT string is
+    saved so "protected" routes behave correctly in the UI.
+  - Dashboard: Computes statistics from the in-memory application list (totals,
+    interviews, offers, rejections), shows upcoming deadlines, and a monthly
+    chart based on "applied date."
+  - Applications: Full CRUD UI — list, search, filter by status, sort, paginate,
+    add/edit in a modal, delete with confirmation. Status uses the color coding
+    you specified (Applied / Interview / Offer / Rejected).
+  - Profile: Displays the stored user name and email, theme preference, logout.
+
+• State management: Zustand (`src/stores/appStore.ts`) with the persist
+  middleware — one store holds theme, auth (user + mock JWT), and applications.
+  React hooks `useAuth`, `useTheme`, and `useApplications` wrap the store with
+  shallow equality so components do not over-render.
+
+• Routing: Public route `/login`. Authenticated area uses `/`, `/dashboard`,
+  `/applications`, `/profile` with a layout that includes navigation and the
+  notifications dropdown (upcoming deadlines derived from application data).
+
+
+--------------------------------------------------------------------------------
+2. WHERE DATA IS STORED RIGHT NOW
+--------------------------------------------------------------------------------
+
+Everything persists in the browser using localStorage (no database yet).
+
+  Primary key: placement-tracker-app
+    Zustand persist saves a single JSON blob: { state: { theme, token, user,
+    applications }, version }. Only those fields are persisted (actions are not).
+
+  Legacy keys (optional one-time migration into placement-tracker-app on first
+  load if the new key is empty): placement-tracker-token, placement-tracker-user,
+  placement-tracker-applications, placement-tracker-theme — see
+  src/stores/migrateLegacyStorage.ts.
+
+• First visit: If there is no persisted applications array yet, the store seeds
+  demo applications so the dashboard and list are not empty. Edits sync
+  through Zustand persist automatically.
+
+• Limitations (why you need a backend + DB):
+  - Data is per-browser only; clearing site data or using another device loses
+    sync unless you export/import manually.
+  - "JWT" is not cryptographically signed or validated.
+  - File uploads (resume) only retain the filename in the stored object; files
+    are not uploaded anywhere.
+  - Not suitable for multi-user security or backups.
+
+
+--------------------------------------------------------------------------------
+3. FUTURE PLANS — API INTEGRATION (AXIOS) & MERN SHAPE
+--------------------------------------------------------------------------------
+
+Target architecture: MERN (MongoDB, Express, React, Node.js).
+
+Frontend changes (high level):
+  • Install axios: npm install axios
+  • Create a small API module, e.g. src/lib/api.ts, with:
+      - axios.create({ baseURL: import.meta.env.VITE_API_URL })
+      - Request interceptor: attach Authorization: Bearer <token> from memory or
+        localStorage after login.
+      - Response interceptor: on 401, clear token and redirect to /login.
+  • Replace store actions login/signup/logout with POST /api/auth/register,
+    POST /api/auth/login, and optional GET /api/auth/me (then set token/user in
+    the Zustand store; you may drop persist for token or use httpOnly cookies).
+  • Replace persisted applications with API calls and optionally keep a client
+    cache in Zustand:
+      GET    /api/applications
+      POST   /api/applications
+      PATCH  /api/applications/:id
+      DELETE /api/applications/:id
+  • Use Vite env vars: .env with VITE_API_URL=https://your-api.example.com
+
+Backend (Express + Node):
+  • REST (or GraphQL later) routes as above.
+  • Passwords: hash with bcrypt; never store plain text.
+  • JWT: sign with a server secret (env var), set short expiry; optionally use
+    refresh tokens for production hardening.
+  • Validate all inputs (e.g. express-validator or Zod).
+  • CORS: allow your frontend origin only in production.
+
+Database (MongoDB):
+  • Recommended for learning and free tier: MongoDB Atlas (see section 5).
+  • ODM: Mongoose models for User and Application (fields matching your React
+    types: company, role, status, appliedDate, deadline, notes, resume URL or
+    GridFS reference, userId reference).
+
+• Hosting the API and DB are separate concerns: the API connects to MongoDB
+  using a connection string in server-side environment variables only (never
+  expose the full string in the React bundle).
+
+
+--------------------------------------------------------------------------------
+4. DATABASE MANAGEMENT — WHAT TO USE AND HOW
+--------------------------------------------------------------------------------
+
+• MongoDB Atlas (managed, free M0 cluster):
+  - Create a project and a free cluster (choose a region close to your users).
+  - Database Access: create a database user (username + password).
+  - Network Access: add your IP (or 0.0.0.0/0 for quick class demos — less
+    secure; tighten for real deployments).
+  - Get the connection string (SRV URI) and substitute user, password, and
+    database name.
+  - In Node: mongoose.connect(process.env.MONGODB_URI)
+
+• Compass (optional): GUI to browse collections and documents on Atlas.
+
+• Backups / scaling: M0 is for development; production apps plan for paid tier,
+  backups, and IP allowlists.
+
+
+--------------------------------------------------------------------------------
+5. HOSTING THE APPLICATION — PRACTICAL STEPS
+--------------------------------------------------------------------------------
+
+You typically deploy two pieces: (A) static React build, (B) Node API.
+
+A) Frontend (React / Vite build)
+  1. npm run build  →  outputs to dist/
+  2. Upload dist/ to static hosting, for example:
+     - Vercel / Netlify (connect Git repo; set build command and output dir)
+     - AWS S3 bucket (static website) + CloudFront CDN (custom domain optional)
+  3. Set environment variable VITE_API_URL to your production API URL before
+     build (or use runtime config pattern if you need one build for many envs).
+
+B) Backend (Express on Node)
+  Common free/low-cost options:
+  - Render, Railway, Fly.io — connect Git, set start command (node server.js),
+    add env vars (MONGODB_URI, JWT_SECRET, PORT).
+  - AWS EC2 (Free Tier eligible t2.micro / t3.micro in many accounts): install
+    Node, clone repo, use PM2 or systemd to keep process alive, put Nginx in
+    front for HTTPS (Let’s Encrypt).
+
+  Minimum env vars on server:
+    MONGODB_URI=...
+    JWT_SECRET=...
+    PORT=8080
+    CLIENT_ORIGIN=https://your-frontend-domain.com   (for CORS)
+
+
+--------------------------------------------------------------------------------
+6. AWS (FREE TIER) — CONNECTING TO YOUR DATABASE AND BACKEND
+--------------------------------------------------------------------------------
+
+Important clarification:
+  • MongoDB Atlas runs on MongoDB’s cloud (often AWS regions under the hood),
+    but you do not "host MongoDB inside your AWS account" on the free student
+    path — you connect FROM your AWS-hosted API TO Atlas using the URI.
+  • AWS’s own MongoDB-compatible service (DocumentDB) is not a practical free-tier
+    choice for a small project; Atlas M0 is the usual pairing.
+
+Typical student / portfolio setup:
+
+  1) MongoDB Atlas (free M0)
+     - Create cluster, user, allow network access, copy MONGODB_URI.
+
+  2) Backend on AWS EC2 (Free Tier where eligible)
+     - Launch EC2 instance (Amazon Linux or Ubuntu).
+     - Security Group: inbound SSH (22) from your IP; HTTP (80) / HTTPS (443)
+       from the internet if serving the API publicly (or only from CloudFront /
+       your frontend if you use a private pattern).
+     - SSH in, install Node.js LTS, Git, PM2.
+     - Clone your backend repo, npm install, create .env with MONGODB_URI and
+       JWT_SECRET, node or pm2 start.
+     - Optional: Nginx reverse proxy to Node on localhost:PORT with SSL via
+       Certbot.
+
+  3) Frontend on AWS
+     - S3: create bucket, enable static website hosting, upload dist/ contents.
+     - CloudFront: distribution pointing to the bucket, HTTPS, optional custom
+       domain (Route 53).
+     - Build React with VITE_API_URL pointing to your EC2 public DNS or ALB URL
+       (prefer HTTPS and a stable domain before going live).
+
+  4) Security checklist
+     - Never commit .env or Atlas passwords to Git.
+     - Restrict Atlas IP allowlist to your EC2 egress IP if possible.
+     - Use HTTPS for API in production.
+
+Alternative: host API on Render/Railway (still using Atlas) and only use AWS for
+S3+CloudFront for the React app — fewer server maintenance tasks while learning.
+
+
+--------------------------------------------------------------------------------
+7. SUGGESTED BUILD ORDER FOR YOUR PROJECT
+--------------------------------------------------------------------------------
+
+  1. Express app with health route + MongoDB connection test.
+  2. User model + register/login + JWT issuance.
+  3. Application model + CRUD scoped to req.user.id.
+  4. Swap React contexts to axios calls; remove demo localStorage persistence
+     for applications (keep token/user keys or move to httpOnly cookies later).
+  5. Deploy Atlas → deploy API → deploy frontend with correct CORS and API URL.
+  6. Add resume upload (e.g. S3 presigned URLs or Multer + stored path in Mongo).
+
+
+================================================================================
+  End of guide — update this file as your architecture choices evolve.
+================================================================================
