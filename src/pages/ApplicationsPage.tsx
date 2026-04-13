@@ -78,22 +78,30 @@ export function ApplicationsPage() {
     setModalOpen(true)
   }
 
-  function handleSave(data: Omit<Application, 'id' | 'createdAt'>) {
-    if (editing) {
-      updateApplication(editing.id, data)
-      toast.success('Application updated.')
-    } else {
-      addApplication(data)
-      toast.success('Application added.')
+  async function handleSave(data: Omit<Application, 'id' | 'createdAt'>) {
+    try {
+      if (editing) {
+        await updateApplication(editing.id, data)
+        toast.success('Application updated.')
+      } else {
+        await addApplication(data)
+        toast.success('Application added.')
+      }
+      setModalOpen(false)
+      setEditing(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save application.')
     }
-    setModalOpen(false)
-    setEditing(null)
   }
 
-  function handleDelete(a: Application) {
+  async function handleDelete(a: Application) {
     if (!window.confirm(`Delete application for ${a.company}?`)) return
-    deleteApplication(a.id)
-    toast.success('Deleted successfully.')
+    try {
+      await deleteApplication(a.id)
+      toast.success('Deleted successfully.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete application.')
+    }
   }
 
   return (

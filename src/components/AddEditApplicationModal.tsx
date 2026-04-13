@@ -28,7 +28,7 @@ type Props = {
   open: boolean
   onClose: () => void
   initial: Application | null
-  onSave: (data: Omit<Application, 'id' | 'createdAt'>) => void
+  onSave: (data: Omit<Application, 'id' | 'createdAt'>) => void | Promise<void>
 }
 
 export function AddEditApplicationModal({

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import {
   Bell,
@@ -9,31 +9,21 @@ import {
   Sun,
   UserRound,
 } from 'lucide-react'
-import { useApplications, useAuth, useTheme } from '../stores/appStore'
+import { useAuth, useDashboard, useTheme } from '../stores/appStore'
 import { cn } from '../lib/utils'
-import { isBefore, parseISO, startOfDay } from 'date-fns'
-
-function upcomingCount(applications: { deadline: string }[]) {
-  const today = startOfDay(new Date())
-  return applications.filter((a) => {
-    const d = parseISO(a.deadline)
-    return !isBefore(d, today)
-  }).length
-}
+import { parseISO, startOfDay } from 'date-fns'
 
 export function AppLayout() {
   const { logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
-  const { applications } = useApplications()
+  const { upcomingDeadlines, fetchDashboardData } = useDashboard()
   const [notifOpen, setNotifOpen] = useState(false)
 
-  const upcoming = applications
-    .filter((a) => !isBefore(parseISO(a.deadline), startOfDay(new Date())))
-    .sort(
-      (a, b) =>
-        parseISO(a.deadline).getTime() - parseISO(b.deadline).getTime(),
-    )
-  const count = upcomingCount(applications)
+  useEffect(() => {
+    void fetchDashboardData()
+  }, [fetchDashboardData])
+
+  const count = upcomingDeadlines.length
 
   const navCls = ({ isActive }: { isActive: boolean }) =>
     cn(
@@ -109,12 +99,12 @@ export function AppLayout() {
                         : `You have ${count} upcoming deadline${count === 1 ? '' : 's'}`}
                     </p>
                     <ul className="max-h-64 space-y-2 overflow-auto text-sm">
-                      {upcoming.length === 0 ? (
+                      {upcomingDeadlines.length === 0 ? (
                         <li className="text-text-muted">
                           You&apos;re all caught up.
                         </li>
                       ) : (
-                        upcoming.map((a) => (
+                        upcomingDeadlines.map((a) => (
                           <li
                             key={a.id}
                             className="flex justify-between gap-2 rounded-lg bg-black/3 px-2 py-1.5 dark:bg-white/6"

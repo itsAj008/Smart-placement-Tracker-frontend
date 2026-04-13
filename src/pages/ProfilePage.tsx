@@ -23,7 +23,7 @@ export function ProfilePage() {
         </p>
       </div>
 
-      <section className="rounded-2xl border border-border-app bg-surface-elevated p-6 shadow-sm">
+      <section className="rounded-2xl border border-border-app bg-surface-elevated dark:bg-amber-400 p-6 shadow-sm">
         <dl className="space-y-4">
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-text-muted">

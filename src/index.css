@@ -2,8 +2,8 @@
 
 @theme {
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-  --color-surface: oklch(0.99 0.005 280);
-  --color-surface-elevated: oklch(1 0 0);
+  --color-surface: oklch(0.97 0.01 280);
+  --color-surface-elevated: oklch(0.98 0.005 280);
   --color-border-app: oklch(0.92 0.01 280);
   --color-text-muted: oklch(0.45 0.02 280);
 }
