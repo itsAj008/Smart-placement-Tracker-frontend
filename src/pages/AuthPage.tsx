@@ -160,8 +160,7 @@ export function AuthPage() {
         </p>
 
         <p className="mt-4 text-center text-xs text-text-muted">
-          JWT auth will connect to your API — this screen stores a mock token for
-          now.
+          Connected to backend auth APIs. Full JWT security can be added next.
         </p>
       </div>
     </div>

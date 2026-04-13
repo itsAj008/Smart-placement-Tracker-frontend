@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import {
   Bar,
   BarChart,
@@ -8,31 +9,24 @@ import {
   YAxis,
 } from 'recharts'
 import { differenceInCalendarDays, parseISO, startOfDay } from 'date-fns'
-import { useApplications } from '../stores/appStore'
+import { useApplications, useDashboard } from '../stores/appStore'
 import { monthlyApplicationCounts } from '../lib/chartData'
 import { STATUS_STYLES } from '../lib/statusStyles'
 
 export function DashboardPage() {
   const { applications } = useApplications()
+  const { dashboardStats, upcomingDeadlines, fetchDashboardData } = useDashboard()
 
-  const total = applications.length
-  const interviews = applications.filter((a) => a.status === 'Interview').length
-  const offers = applications.filter((a) => a.status === 'Offer').length
-  const rejections = applications.filter((a) => a.status === 'Rejected').length
+  useEffect(() => {
+    void fetchDashboardData()
+  }, [fetchDashboardData])
+
+  const total = dashboardStats.total
+  const interviews = dashboardStats.interviews
+  const offers = dashboardStats.offers
+  const rejections = dashboardStats.rejections
 
   const chartData = monthlyApplicationCounts(applications, 5)
-
-  const today = startOfDay(new Date())
-  const upcoming = [...applications]
-    .filter((a) => {
-      const d = parseISO(a.deadline)
-      return differenceInCalendarDays(startOfDay(d), today) >= 0
-    })
-    .sort(
-      (a, b) =>
-        parseISO(a.deadline).getTime() - parseISO(b.deadline).getTime(),
-    )
-    .slice(0, 5)
 
   return (
     <div className="space-y-8">
@@ -55,14 +49,14 @@ export function DashboardPage() {
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-text-muted">
             Upcoming deadlines
           </h2>
-          {upcoming.length === 0 ? (
+          {upcomingDeadlines.length === 0 ? (
             <p className="text-sm text-text-muted">
               No upcoming deadlines. Add applications with deadlines to see them
               here.
             </p>
           ) : (
             <ul className="space-y-2">
-              {upcoming.map((a) => (
+              {upcomingDeadlines.map((a) => (
                 <li
                   key={a.id}
                   className="flex items-center justify-between gap-3 rounded-xl bg-black/10  px-3 py-2 text-sm "
