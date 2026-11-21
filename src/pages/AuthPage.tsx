@@ -38,7 +38,7 @@ export function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-surface px-4 py-12 text-zinc-900 dark:text-zinc-100">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-surface px-4 py-12 text-text-muted">
       <div className="mb-8 flex items-center gap-3">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/30">
           <Briefcase className="h-7 w-7" aria-hidden />

@@ -1,28 +1,93 @@
 @import 'tailwindcss';
 
+/* Smart Placement Tracker - Premium Minimal Design Tokens */
+
+/* Warm neutral base with sophisticated undertones */
 @theme {
-  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
-  --color-surface: oklch(0.9983 0 280);
-  --color-surface-elevated: oklch(0.98 0.005 280);
-  --color-border-app: oklch(0.92 0.01 280);
-  --color-text-muted: oklch(0.45 0.02 280);
+  /* Base colors (light mode) */
+  --color-surface: #f8fafc;
+  --color-surface-elevated: #ffffff;
+  --color-surface-muted: #eef2f7;
+  --color-text-muted: #1e293b;
+  --color-border-app: #e2e8f0;
+
+  /* Status accent colors - muted, sophisticated tones */
+  --status-success: #34D391;    /* Emerald 300 - calm confidence */
+  --status-interview: #60A5FA;  /* Blue 400 - thoughtful blue */
+  --status-pending: #22D3EE;    /* Cyan 400 - clear modern accent */
+  --status-rejection: #F87171;  /* Rose 300 - gentle red */
+  --status-urgent: #FBBF24;     /* Amber 400 - warm attention */
+
+  /* Border strokes */
+  --color-stroke: #dbe3ed;
+  --color-stroke-focus: oklch(0.73 0.2 260);
+}
+
+/* Dark mode - warm charcoal, never pure black */
+html:not(.dark) body {
+  background: #f8fafc;
 }
 
 html.dark {
   color-scheme: dark;
-  --color-surface: oklch(0.17 0.02 280);
-  --color-surface-elevated: oklch(0.21 0.02 280);
-  --color-border-app: oklch(0.32 0.02 280);
-  --color-text-muted: oklch(0.72 0.02 280);
+  --color-surface: oklch(0.14 0.025 260);
+  --color-surface-elevated: oklch(0.19 0.03 260);
+  --color-surface-muted: oklch(0.24 0.02 260);
+  --color-text-muted: oklch(0.72 0.025 260);
+  --color-border-app: oklch(0.32 0.025 260);
+  --color-stroke: oklch(0.34 0.02 260);
+  --color-stroke-focus: oklch(0.73 0.2 260);
+}
+
+/* Primary blue - used for primary actions */
+@theme {
+  --color-primary: oklch(63% 0.24 260);     /* Blue 600 equivalent */
+  --color-primary-accent: oklch(79% 0.18 260); /* Blue 500 equivalent */
+}
+
+html {
+  font-family: 'DM Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
+  background-color: var(--color-surface);
+  color: #1e293b;
 }
 
-#root {
-  min-height: 100dvh;
+/* Utility classes */
+@utility text-stroke-focus {
+  color: var(--color-stroke-focus);
+}
+
+@utility bg-status-success {
+  background-color: var(--status-success);
+}
+
+@utility bg-status-interview {
+  background-color: var(--status-interview);
+}
+
+@utility bg-status-pending {
+  background-color: var(--status-pending);
+}
+
+@utility bg-status-rejection {
+  background-color: var(--status-rejection);
+}
+
+@utility bg-status-urgent {
+  background-color: var(--status-urgent);
+}
+
+/* Premium utilities */
+@utility status-chip {
+  @apply rounded-full px-2.5 py-1 text-xs font-medium;
+}
+
+@utility text-muted-subtle {
+  opacity: 0.6;
 }

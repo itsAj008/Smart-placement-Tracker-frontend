@@ -1,252 +1,299 @@
-import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { useRef, useState, type FormEvent } from 'react'
+import { X, Calendar, Globe, Edit2 } from 'lucide-react'
+import { parseISO } from 'date-fns'
 import type { Application, ApplicationStatus } from '../types/application'
 import { APPLICATION_STATUSES } from '../types/application'
 import { cn } from '../lib/utils'
 
-type FormState = {
-  company: string
-  role: string
-  status: ApplicationStatus
-  appliedDate: string
-  deadline: string
-  notes: string
-  resumeName: string
-}
-
-const empty: FormState = {
-  company: '',
-  role: '',
-  status: 'Applied',
-  appliedDate: new Date().toISOString().slice(0, 10),
-  deadline: '',
-  notes: '',
-  resumeName: '',
-}
-
-type Props = {
-  open: boolean
+interface AddEditApplicationModalProps {
   onClose: () => void
-  initial: Application | null
-  onSave: (data: Omit<Application, 'id' | 'createdAt'>) => void | Promise<void>
+  initial?: Omit<Application, 'id' | 'createdAt'> | null
+  onSave: (data: Omit<Application, 'id' | 'createdAt'>) => Promise<void>
 }
 
-export function AddEditApplicationModal({
-  open,
-  onClose,
-  initial,
-  onSave,
-}: Props) {
-  const [form, setForm] = useState<FormState>(empty)
+type ApplicationFormData = Omit<Application, 'id' | 'createdAt'>
 
-  useEffect(() => {
-    if (!open) return
-    if (initial) {
-      setForm({
-        company: initial.company,
-        role: initial.role,
-        status: initial.status,
-        appliedDate: initial.appliedDate,
-        deadline: initial.deadline,
-        notes: initial.notes,
-        resumeName: initial.resumeName ?? '',
-      })
-    } else {
-      setForm(empty)
-    }
-  }, [open, initial])
+function emptyApplicationForm(): ApplicationFormData {
+  return {
+    company: '',
+    role: '',
+    status: 'Applied',
+    deadline: '',
+    appliedDate: '',
+    notes: '',
+    website: '',
+  }
+}
 
-  if (!open) return null
+function applicationFormData(initial?: ApplicationFormData | null): ApplicationFormData {
+  return {
+    ...emptyApplicationForm(),
+    ...initial,
+    deadline: initial?.deadline ?? '',
+    appliedDate: initial?.appliedDate ?? '',
+    notes: initial?.notes ?? '',
+    website: initial?.website ?? '',
+  }
+}
 
-  function handleSubmit(e: React.FormEvent) {
+export function AddEditApplicationModal({ onClose, initial, onSave }: AddEditApplicationModalProps) {
+  const formRef = useRef<HTMLFormElement>(null)
+  const [data, setData] = useState<ApplicationFormData>(() => applicationFormData(initial))
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const isEditing = !!initial
+
+  const handleChange = <K extends keyof ApplicationFormData>(field: K, value: ApplicationFormData[K]) => {
+    setData(prev => ({ ...prev, [field]: value }))
+    setErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!form.company.trim() || !form.role.trim()) {
+    const fd = new FormData(e.currentTarget)
+
+    // Get values with sensible defaults
+    const company = String(fd.get('company') || '').trim()
+    const role = String(fd.get('role') || '').trim()
+    const status = String(fd.get('status')) as ApplicationStatus
+    const deadline = String(fd.get('deadline') || '')
+    const appliedDate = String(fd.get('appliedDate') || '')
+    const website = String(fd.get('website') || '')
+    const notes = String(fd.get('notes') || '')
+
+    // Basic validation
+    const newErrors: Record<string, string> = {}
+    if (!company) newErrors.company = 'Company is required'
+    if (!role) newErrors.role = 'Role is required'
+    if (!status) newErrors.status = 'Status is required'
+
+    // Check valid date for deadline if provided
+    if (deadline && Number.isNaN(parseISO(deadline).getTime())) {
+      newErrors.deadline = 'Invalid date format'
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
       return
     }
-    if (!form.deadline) {
-      return
+
+    const saveData: Omit<Application, 'id' | 'createdAt'> = {
+      company,
+      role,
+      status,
+      deadline,
+      appliedDate,
+      website: website.trim() || undefined,
+      notes: notes.trim() || undefined,
     }
-    onSave({
-      company: form.company.trim(),
-      role: form.role.trim(),
-      status: form.status,
-      appliedDate: form.appliedDate,
-      deadline: form.deadline,
-      notes: form.notes.trim(),
-      resumeName: form.resumeName || undefined,
-    })
+
+    try {
+      await onSave(saveData)
+    } catch (err) {
+      setErrors({ form: err instanceof Error ? err.message : 'Failed to save' })
+    }
+  }
+
+  function hasError(field: keyof typeof errors) {
+    return !!errors[field]
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        aria-label="Close dialog"
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 animate-in fade-in duration-200"
+        style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)' }}
         onClick={onClose}
       />
+
+      {/* Modal */}
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="app-modal-title"
-        className={cn(
-          'relative z-10 w-full max-w-lg rounded-t-2xl border border-border-app bg-surface-elevated p-6 shadow-2xl sm:rounded-2xl',
-        )}
+        className="relative w-full max-w-2xl transform overflow-hidden rounded-[32px] border border-stroke bg-surface p-6 md:p-8 shadow-xl animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 id="app-modal-title" className="text-lg font-semibold text-text-muted">
-            {initial ? 'Edit Application' : 'Add Application'}
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <h2 className="text-lg font-semibold tracking-tight text-text-muted">
+            {isEditing ? 'Edit Application' : 'New Application'}
           </h2>
           <button
             type="button"
-            className="rounded-lg p-1.5 hover:bg-black/5 dark:hover:bg-white/10"
             onClick={onClose}
-            aria-label="Close"
+            className="rounded-[12px] p-2 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+            aria-label="Close modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 text-text-muted" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-text-muted" htmlFor="company">
-              Company
-            </label>
-            <input
-              id="company"
-              className="w-full rounded-lg border border-border-app bg-surface px-3 py-2 text-sm outline-none ring-blue-500/30 focus:ring-2"
-              value={form.company}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, company: e.target.value }))
-              }
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-text-muted" htmlFor="role">
-              Role
-            </label>
-            <input
-              id="role"
-              className="w-full rounded-lg border border-border-app bg-surface px-3 py-2 text-sm outline-none ring-blue-500/30 focus:ring-2"
-              value={form.role}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, role: e.target.value }))
-              }
-              required
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-text-muted" htmlFor="status">
-              Status
-            </label>
-            <select
-              id="status"
-              className="w-full rounded-lg border border-border-app text-text-muted bg-surface px-3 py-2 text-sm outline-none ring-blue-500/30 focus:ring-2"
-              value={form.status}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  status: e.target.value as ApplicationStatus,
-                }))
-              }
-            >
-              {APPLICATION_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label
-                className="mb-1 block text-sm font-medium text-text-muted"
-                htmlFor="applied"
-              >
-                Applied date
+        {/* Form */}
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+          {errors.form && (
+            <p className="rounded-[12px] bg-red-500/10 px-4 py-3 text-xs text-status-rejection">
+              {errors.form}
+            </p>
+          )}
+
+          {/* Company & Role - large input group */}
+          <div className={cn(
+            'group grid gap-5 sm:grid-cols-2',
+            errors.company && 'sm:col-span-1'
+          )}>
+            <div className="space-y-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-text-muted/80">Company</span>
+                <input
+                  type="text"
+                  name="company"
+                  placeholder="e.g., Google, Meta, Stripe..."
+                  className={cn(
+                    'w-full rounded-[16px] border border-stroke bg-surface-muted px-4 py-3 text-sm font-medium tracking-tight outline-none transition-all',
+                    hasError('company') ? 'border-red-500' : 'border-stroke hover:border-stroke-focus focus:ring-2 focus:ring-blue-500/30',
+                    'text-text-muted placeholder:text-text-muted/40'
+                  )}
+                  value={data.company}
+                  onChange={(e) => handleChange('company', e.target.value)}
+                />
               </label>
-              <input
-                id="applied"
-                type="date"
-                className="w-full rounded-lg border border-border-app text-text-muted bg-surface px-3 py-2 text-sm outline-none ring-blue-500/30 focus:ring-2"
-                value={form.appliedDate}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, appliedDate: e.target.value }))
-                }
-                required
-              />
             </div>
-            <div>
-              <label
-                className="mb-1 block text-sm font-medium text-text-muted"
-                htmlFor="deadline"
-              >
-                Deadline
+
+            <div className="space-y-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-text-muted/80">Role / Position</span>
+                <input
+                  type="text"
+                  name="role"
+                  placeholder="e.g., Software Engineer, Product Designer..."
+                  className={cn(
+                    'w-full rounded-[16px] border border-stroke bg-surface-muted px-4 py-3 text-sm font-medium tracking-tight outline-none transition-all',
+                    hasError('role') ? 'border-red-500' : 'border-stroke hover:border-stroke-focus focus:ring-2 focus:ring-blue-500/30',
+                    'text-text-muted placeholder:text-text-muted/40'
+                  )}
+                  value={data.role}
+                  onChange={(e) => handleChange('role', e.target.value)}
+                />
               </label>
-              <input
-                id="deadline"
-                type="date"
-                className="w-full rounded-lg border border-border-app text-text-muted bg-surface px-3 py-2 text-sm outline-none ring-blue-500/30 focus:ring-2"
-                value={form.deadline}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, deadline: e.target.value }))
-                }
-                // required
-              />
             </div>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor="notes">
-              Notes
-            </label>
-            <textarea
-              id="notes"
-              rows={3}
-              className="w-full resize-none rounded-lg border border-border-app bg-surface px-3 py-2 text-sm outline-none ring-blue-500/30 focus:ring-2"
-              value={form.notes}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, notes: e.target.value }))
-              }
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor="resume">
-              Resume (attach)
-            </label>
-            <input
-              id="resume"
-              type="file"
-              accept=".pdf,.doc,.docx"
-              className="w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                setForm((f) => ({
-                  ...f,
-                  resumeName: file ? file.name : '',
-                }))
-              }}
-            />
-            {form.resumeName ? (
-              <p className="mt-1 text-xs text-text-muted">
-                Selected: {form.resumeName}
-              </p>
-            ) : null}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          {/* Status, Deadline, Applied Date */}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-text-muted/80">Status</span>
+                <select
+                  name="status"
+                  className={cn(
+                    'w-full rounded-[16px] border border-stroke bg-surface-muted px-4 py-3 text-sm font-medium tracking-tight outline-none transition-all',
+                    'cursor-pointer appearance-none text-text-muted hover:border-stroke-focus focus:ring-2 focus:ring-blue-500/30'
+                  )}
+                  value={data.status}
+                  onChange={(e) => handleChange('status', e.target.value as ApplicationStatus)}
+                >
+                  {APPLICATION_STATUSES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-text-muted/80 flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Deadline
+                </span>
+                <input
+                  type="date"
+                  name="deadline"
+                  className={cn(
+                    'w-full rounded-[16px] border border-stroke bg-surface-muted px-4 py-3 text-sm font-medium tracking-tight outline-none transition-all',
+                    'text-text-muted hover:border-stroke-focus focus:ring-2 focus:ring-blue-500/30'
+                  )}
+                  value={data.deadline}
+                  onChange={(e) => handleChange('deadline', e.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-text-muted/80 flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Applied Date
+                </span>
+                <input
+                  type="date"
+                  name="appliedDate"
+                  className={cn(
+                    'w-full rounded-[16px] border border-stroke bg-surface-muted px-4 py-3 text-sm font-medium tracking-tight outline-none transition-all',
+                    'text-text-muted hover:border-stroke-focus focus:ring-2 focus:ring-blue-500/30'
+                  )}
+                  value={data.appliedDate}
+                  onChange={(e) => handleChange('appliedDate', e.target.value)}
+                />
+              </label>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-text-muted/80 flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5" />
+                  Website
+                </span>
+                <input
+                  type="url"
+                  name="website"
+                  placeholder="https://example.com"
+                  className={cn(
+                    'w-full rounded-[16px] border border-stroke bg-surface-muted px-4 py-3 text-sm font-medium tracking-tight outline-none transition-all',
+                    'text-text-muted hover:border-stroke-focus focus:ring-2 focus:ring-blue-500/30'
+                  )}
+                  value={data.website}
+                  onChange={(e) => handleChange('website', e.target.value)}
+                />
+              </label>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-text-muted/80 flex items-center gap-1.5">
+                <Edit2 className="h-3.5 w-3.5" />
+                Notes & Details
+              </span>
+              <textarea
+                name="notes"
+                placeholder="Company info, next steps, contact details, interview feedback..."
+                rows={4}
+                className={cn(
+                  'w-full rounded-[16px] border border-stroke bg-surface-muted px-4 py-3 text-sm leading-relaxed tracking-tight outline-none transition-all',
+                  'text-text-muted placeholder:text-text-muted/40 resize-none hover:border-stroke-focus focus:ring-2 focus:ring-blue-500/30'
+                )}
+                value={data.notes}
+                onChange={(e) => handleChange('notes', e.target.value)}
+              />
+            </label>
+          </div>
+
+          {/* Action buttons */}
+          <div className="mt-8 flex items-center justify-end gap-3 pt-4">
             <button
               type="button"
-              className="rounded-lg px-4 py-2 text-sm font-medium cursor-pointer text-text-muted hover:bg-black/5 dark:hover:bg-white/10"
               onClick={onClose}
+              className="inline-flex h-10 items-center justify-center rounded-[16px] px-5 text-sm font-medium tracking-tight text-text-muted transition-colors hover:bg-black/5 dark:hover:bg-white/10"
             >
               Cancel
             </button>
+
             <button
               type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold cursor-pointer text-white shadow-md shadow-blue-600/25 hover:bg-blue-700"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-blue-500 from-blue-500 to-cyan-600 shadow-green-500/55 px-6 text-sm font-semibold tracking-tight text-white shadow-md transition-transform hover:scale-[1.02]"
             >
-              Save
+              <Edit2 className="h-4 w-4" />
+              {isEditing ? 'Update' : 'Add'} Application
             </button>
           </div>
         </form>
