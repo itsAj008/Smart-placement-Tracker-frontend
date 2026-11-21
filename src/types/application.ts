@@ -11,7 +11,8 @@ export type Application = {
   status: ApplicationStatus
   appliedDate: string
   deadline: string
-  notes: string
+  notes?: string
+  website?: string
   resumeName?: string
   createdAt: string
 }

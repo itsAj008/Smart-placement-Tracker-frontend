@@ -14,64 +14,144 @@ export function ProfilePage() {
     navigate('/login', { replace: true })
   }
 
+  const initials = user?.name
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
   return (
     <div className="mx-auto max-w-lg space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-text-muted">Profile</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Your account and preferences
-        </p>
+      {/* Welcome header with avatar */}
+      <div className="text-center">
+        <span
+          className={cn(
+            'flex h-20 w-20 mx-auto shrink-0 items-center justify-center rounded-[24px] text-xl font-semibold tracking-tight text-white shadow-lg',
+            'bg-gradient-to-br from-sky-500 to-cyan-600'
+          )}
+        >
+          {initials || '?'}
+        </span>
+
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-text-muted">
+          {user?.name || 'User'}
+        </h1>
+        <p className="text-sm text-text-muted/60">{user?.email || '—'}</p>
       </div>
 
-      <section className="rounded-2xl border border-border-app bg-surface-elevated p-6 shadow-sm">
-        <dl className="space-y-4">
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Name
-            </dt>
-            <dd className="mt-1 text-sm font-medium text-text-muted">{user?.name ?? '—'}</dd>
+      {/* Account details card */}
+      <section className="rounded-[24px] border border-stroke bg-surface p-6">
+        <h2 className="mb-6 text-sm font-semibold uppercase tracking-wide text-text-muted/80">
+          Account Details
+        </h2>
+
+        <div className="space-y-5">
+          {/* Name row */}
+          <div className="flex items-center justify-between gap-3.5">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-text-muted">Full Name</span>
+              <span className="text-xs text-text-muted/60">Your registered name</span>
+            </div>
+            <span
+              className="text-base font-semibold tracking-tight text-text-muted"
+            >
+              {user?.name}
+            </span>
           </div>
-          <div>
-            <dt className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Email
-            </dt>
-            <dd className="mt-1 text-sm font-medium text-text-muted">{user?.email ?? '—'}</dd>
+
+          {/* Divider */}
+          <div className="h-px w-full bg-stroke opacity-50" />
+
+          {/* Email row */}
+          <div className="flex items-center justify-between gap-3.5">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-text-muted">Email Address</span>
+              <span className="text-xs text-text-muted/60">Contact email</span>
+            </div>
+            <span
+              className="text-base font-semibold tracking-tight max-w-[250px] truncate text-text-muted"
+            >
+              {user?.email}
+            </span>
           </div>
-        </dl>
+
+          {/* Divider */}
+          <div className="h-px w-full bg-stroke opacity-50" />
+
+          {/* Role/Title row (placeholder) */}
+          <div className="flex items-center justify-between gap-3.5">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium text-text-muted">Current Role</span>
+              <span className="text-xs text-text-muted/60">Your current job title</span>
+            </div>
+            <span
+              className="text-base font-semibold tracking-tight text-stroke-focus"
+            >
+              Student
+            </span>
+          </div>
+        </div>
       </section>
 
-      <section className="rounded-2xl border border-border-app bg-surface-elevated p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-semibold text-text-muted">Appearance</h2>
+      {/* Settings */}
+      <section className="space-y-3">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-text-muted/80">
+          Preferences
+        </h2>
+
+        {/* Theme toggle as pill button */}
         <button
           type="button"
           onClick={toggleTheme}
-          className="flex w-full items-center text-text-muted justify-between rounded-xl border border-border-app bg-surface px-4 py-3 text-left text-sm font-medium hover:bg-black/3 dark:hover:bg-white/5"
+          className={cn(
+            'group relative flex w-full items-center justify-between rounded-[16px] border border-stroke bg-surface-muted px-4 py-3.5 text-left text-sm font-medium transition-all hover:bg-black/3 dark:hover:bg-white/5',
+            theme === 'dark' ? 'text-text-muted' : 'text-text-muted'
+          )}
         >
-          <span>Theme</span>
-          <span className="flex items-center gap-2 text-text-muted">
+          <div className="flex items-center gap-2">
             {theme === 'dark' ? (
               <>
                 <Moon className="h-4 w-4" />
-                Dark
+                <span>Dark Mode</span>
               </>
             ) : (
               <>
                 <Sun className="h-4 w-4" />
-                Light
+                <span>Light Mode</span>
               </>
             )}
-          </span>
+          </div>
+
+          {/* Indicator circle */}
+          <span
+            className={cn(
+              'h-2 w-2 rounded-full transition-transform group-hover:scale-125',
+              theme === 'dark' ? 'bg-status-interview' : 'bg-status-success'
+            )}
+          />
         </button>
+
+        {/* Notification settings placeholder */}
+        <div className="rounded-[16px] border border-stroke bg-surface-muted px-4 py-3.5 text-sm">
+          <p className="text-text-muted/60">Notification preferences coming soon</p>
+        </div>
       </section>
 
+      {/* Logout button - prominent but subtle */}
       <button
         type="button"
         onClick={handleLogout}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500 bg-red-600/10 px-4 py-3 text-sm font-semibold text-rose-700 cursor-pointer hover:bg-red-300/20 dark:text-red-500"
+        className="group relative flex w-full items-center justify-center gap-2 rounded-[16px] px-4 py-3.5 text-sm font-semibold tracking-tight transition-colors hover:bg-red-500/10"
+        style={{ color: '#F43F5E' }}
       >
-        <LogOut className="h-4 w-4" />
-        Log out
+        <span>Sign out</span>
+        <LogOut className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
       </button>
     </div>
   )
+}
+
+function cn(...classes: (string | undefined)[]) {
+  return classes.filter(Boolean).join(' ')
 }

@@ -47,6 +47,7 @@ function toApplication(data: ApplicationApi): Application {
     appliedDate,
     deadline,
     notes: data.notes,
+    website: data.website,
     resumeName: data.resumeName,
     createdAt: data.createdAt,
   }
